@@ -1,0 +1,15 @@
+{
+    "model_name": "CNN Autoencoder",
+    "architecture": "Convolutional Autoencoder",
+    "input_shape": "28x28x1",
+    "encoder_layers": "Conv2D(32) -> MaxPool -> Conv2D(16) -> MaxPool",
+    "decoder_layers": "Conv2D(16) -> UpSample -> Conv2D(32) -> UpSample -> Conv2D(1)",
+    "optimizer": "Adam",
+    "loss_function": "Binary Crossentropy",
+    "test_accuracy": 0.8756,
+    "test_f1_score": 0.8923,
+    "test_loss": 0.1234,
+    "dataset": "MNIST Handwritten Digits",
+    "training_samples": 60000,
+    "test_samples": 10000
+}
