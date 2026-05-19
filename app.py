@@ -1,49 +1,53 @@
-﻿"""
-Flask Web Application for Image Denoising
-"""
-import os
-import sys
-import numpy as np
-import json
-
-# Use tf-keras (Keras 2 compatibility layer) to load old .h5 models
-os.environ["TF_USE_LEGACY_KERAS"] = "1"
-
+import os, sys, numpy as np, json, io, base64
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 from flask import Flask, render_template, request, jsonify
-import tf_keras as keras
-from tf_keras.models import load_model
 from PIL import Image
-import io
-import base64
 
-# Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
-
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
-# Load the trained model
-MODEL_PATH = 'best_autoencoder_model.h5'
-MODEL_INFO_PATH = 'model_info.json'
+MODEL_PATH = "best_autoencoder_model.h5"
+MODEL_INFO_PATH = "model_info.json"
 model = None
 model_info = None
 
+
 def load_trained_model():
-    """Load the trained autoencoder model"""
     global model
-    if os.path.exists(MODEL_PATH):
-        model = load_model(MODEL_PATH)
-        print(f"Model loaded from {MODEL_PATH}")
-    else:
-        print(f"Warning: Model file {MODEL_PATH} not found!")
+    if not os.path.exists(MODEL_PATH):
+        print(f"Warning: {MODEL_PATH} not found")
+        return
+    import tensorflow as tf
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D
+    try:
+        # Rebuild the exact same architecture, then load weights only.
+        # This bypasses Keras version deserialization issues with InputLayer config.
+        inp = Input(shape=(28, 28, 1))
+        x = Conv2D(32, (3, 3), activation="relu", padding="same")(inp)
+        x = MaxPooling2D((2, 2), padding="same")(x)
+        x = Conv2D(16, (3, 3), activation="relu", padding="same")(x)
+        enc = MaxPooling2D((2, 2), padding="same")(x)
+        x = Conv2D(16, (3, 3), activation="relu", padding="same")(enc)
+        x = UpSampling2D((2, 2))(x)
+        x = Conv2D(32, (3, 3), activation="relu", padding="same")(x)
+        x = UpSampling2D((2, 2))(x)
+        out = Conv2D(1, (3, 3), activation="sigmoid", padding="same")(x)
+        rebuilt = Model(inp, out)
+        rebuilt.load_weights(MODEL_PATH)
+        model = rebuilt
+        print("Model loaded via weights-only approach")
+    except Exception as e:
+        print(f"Model load failed: {e}")
+
 
 def load_model_info():
-    """Load model information from JSON file"""
     global model_info
     if os.path.exists(MODEL_INFO_PATH):
-        with open(MODEL_INFO_PATH, 'r') as f:
+        with open(MODEL_INFO_PATH) as f:
             model_info = json.load(f)
-        print(f"Model info loaded from {MODEL_INFO_PATH}")
     else:
         model_info = {
             "model_name": "CNN Autoencoder",
@@ -53,70 +57,56 @@ def load_model_info():
             "test_loss": "N/A"
         }
 
+
 def preprocess_image(image):
-    """Preprocess uploaded image for model"""
-    img = image.convert('L')
-    img = img.resize((28, 28))
-    img_array = np.array(img) / 255.0
-    img_array = img_array.reshape(1, 28, 28, 1)
-    return img_array
+    img = image.convert("L").resize((28, 28))
+    arr = np.array(img) / 255.0
+    return arr.reshape(1, 28, 28, 1)
 
-def array_to_base64(img_array):
-    """Convert numpy array to base64 string for display"""
-    img_array = img_array.squeeze()
-    img_array = (img_array * 255).astype(np.uint8)
-    img = Image.fromarray(img_array, mode='L')
-    buffer = io.BytesIO()
-    img.save(buffer, format='PNG')
-    img_str = base64.b64encode(buffer.getvalue()).decode()
-    return f"data:image/png;base64,{img_str}"
 
-# Load model and info at module level so it works with Docker
+def array_to_base64(arr):
+    arr = arr.squeeze()
+    arr = (arr * 255).astype(np.uint8)
+    img = Image.fromarray(arr, mode="L")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
 load_trained_model()
 load_model_info()
 
 
-@app.route('/')
+@app.route("/")
 def index():
-    """Render main page"""
-    return render_template('index.html', model_info=model_info)
+    return render_template("index.html", model_info=model_info)
 
-@app.route('/api/model-info', methods=['GET'])
+
+@app.route("/api/model-info")
 def get_model_info():
-    """Return model information"""
     if model_info:
         return jsonify(model_info)
-    return jsonify({'error': 'Model info not available'}), 404
+    return jsonify({"error": "not available"}), 404
 
-@app.route('/denoise', methods=['POST'])
+
+@app.route("/denoise", methods=["POST"])
 def denoise():
-    """Handle image denoising request"""
     if model is None:
-        return jsonify({'error': 'Model not loaded'}), 500
-
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image uploaded'}), 400
-
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'No image selected'}), 400
-
+        return jsonify({"error": "Model not loaded"}), 500
+    if "image" not in request.files:
+        return jsonify({"error": "No image uploaded"}), 400
+    file = request.files["image"]
+    if not file.filename:
+        return jsonify({"error": "No image selected"}), 400
     try:
         image = Image.open(file.stream)
-        processed_img = preprocess_image(image)
-        denoised_img = model.predict(processed_img, verbose=0)
-
-        original_b64 = array_to_base64(processed_img)
-        denoised_b64 = array_to_base64(denoised_img)
-
-        return jsonify({
-            'original': original_b64,
-            'denoised': denoised_b64
-        })
-
+        proc = preprocess_image(image)
+        denoised = model.predict(proc, verbose=0)
+        return jsonify({"original": array_to_base64(proc), "denoised": array_to_base64(denoised)})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 7860))
-    app.run(debug=False, host='0.0.0.0', port=port)
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 7860))
+    app.run(debug=False, host="0.0.0.0", port=port)
