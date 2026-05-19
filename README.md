@@ -1,13 +1,4 @@
-﻿---
-title: DeepClean CNN Autoencoder For Image Denoising
-emoji: 🎨
-colorFrom: purple
-colorTo: blue
-sdk: docker
-pinned: false
-app_port: 7860
-short_description: CNN Autoencoder image denoiser trained on MNIST
----
+
 
 <div align="center">
 
