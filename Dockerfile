@@ -1,4 +1,8 @@
-FROM python:3.10-slim
+﻿FROM python:3.10-slim
+
+# Suppress TensorFlow oneDNN warnings
+ENV TF_ENABLE_ONEDNN_OPTS=0
+ENV TF_CPP_MIN_LOG_LEVEL=2
 
 # Set working directory
 WORKDIR /app

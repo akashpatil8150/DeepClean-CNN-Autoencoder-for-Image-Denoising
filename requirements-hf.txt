@@ -1,5 +1,6 @@
-# Inference-only requirements for Hugging Face deployment
-tensorflow-cpu==2.15.0
-numpy==1.26.4
+﻿# Inference-only requirements for Hugging Face deployment
+# tensorflow 2.13 uses Keras 2.x which matches the saved .h5 model format
+tensorflow-cpu==2.13.0
+numpy==1.24.3
 flask==3.0.3
 pillow==10.3.0
