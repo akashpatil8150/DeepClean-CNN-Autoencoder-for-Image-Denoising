@@ -11,6 +11,10 @@ short_description: CNN Autoencoder image denoiser trained on MNIST
 
 #  DeepClean  CNN Autoencoder for Image Denoising
 
+[![Live Demo](https://img.shields.io/badge/🤗%20Hugging%20Face-Live%20Demo-blue)](https://huggingface.co/spaces/Akash8150/DeepClean-CNN-Autoencoder-for-Image-Denoising)
+
+> 🚀 **[Try the live demo here](https://huggingface.co/spaces/Akash8150/DeepClean-CNN-Autoencoder-for-Image-Denoising)**
+
 A deep learning web app that removes noise from handwritten digit images using a **Convolutional Autoencoder** trained on the MNIST dataset.
 
 ## How It Works
