@@ -1,6 +1,7 @@
 ﻿# Inference-only requirements for Hugging Face deployment
-# tensorflow 2.13 uses Keras 2.x which matches the saved .h5 model format
-tensorflow-cpu==2.13.0
-numpy==1.24.3
+# tf-keras provides Keras 2.x compatibility for loading old .h5 models with TF 2.16+
+tensorflow-cpu==2.16.1
+tf-keras==2.16.0
+numpy==1.26.4
 flask==3.0.3
 pillow==10.3.0

@@ -1,12 +1,17 @@
-"""
+﻿"""
 Flask Web Application for Image Denoising
 """
 import os
 import sys
 import numpy as np
 import json
+
+# Use tf-keras (Keras 2 compatibility layer) to load old .h5 models
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+
 from flask import Flask, render_template, request, jsonify
-from tensorflow.keras.models import load_model
+import tf_keras as keras
+from tf_keras.models import load_model
 from PIL import Image
 import io
 import base64
@@ -40,7 +45,6 @@ def load_model_info():
             model_info = json.load(f)
         print(f"Model info loaded from {MODEL_INFO_PATH}")
     else:
-        # Default info if file doesn't exist
         model_info = {
             "model_name": "CNN Autoencoder",
             "architecture": "Convolutional Autoencoder",
@@ -48,35 +52,26 @@ def load_model_info():
             "test_f1_score": "N/A",
             "test_loss": "N/A"
         }
-        print(f"Warning: Model info file {MODEL_INFO_PATH} not found! Using defaults.")
 
 def preprocess_image(image):
     """Preprocess uploaded image for model"""
-    # Convert to grayscale
     img = image.convert('L')
-    # Resize to 28x28
     img = img.resize((28, 28))
-    # Convert to numpy array and normalize
     img_array = np.array(img) / 255.0
-    # Reshape for model input
     img_array = img_array.reshape(1, 28, 28, 1)
     return img_array
 
 def array_to_base64(img_array):
     """Convert numpy array to base64 string for display"""
-    # Remove batch and channel dimensions
     img_array = img_array.squeeze()
-    # Convert to 0-255 range
     img_array = (img_array * 255).astype(np.uint8)
-    # Create PIL image
     img = Image.fromarray(img_array, mode='L')
-    # Convert to base64
     buffer = io.BytesIO()
     img.save(buffer, format='PNG')
     img_str = base64.b64encode(buffer.getvalue()).decode()
     return f"data:image/png;base64,{img_str}"
 
-# Load model and info at module level so it works with Docker/gunicorn
+# Load model and info at module level so it works with Docker
 load_trained_model()
 load_model_info()
 
@@ -98,35 +93,30 @@ def denoise():
     """Handle image denoising request"""
     if model is None:
         return jsonify({'error': 'Model not loaded'}), 500
-    
+
     if 'image' not in request.files:
         return jsonify({'error': 'No image uploaded'}), 400
-    
+
     file = request.files['image']
     if file.filename == '':
         return jsonify({'error': 'No image selected'}), 400
-    
+
     try:
-        # Read and preprocess image
         image = Image.open(file.stream)
         processed_img = preprocess_image(image)
-        
-        # Denoise image
         denoised_img = model.predict(processed_img, verbose=0)
-        
-        # Convert to base64 for display
+
         original_b64 = array_to_base64(processed_img)
         denoised_b64 = array_to_base64(denoised_img)
-        
+
         return jsonify({
             'original': original_b64,
             'denoised': denoised_b64
         })
-    
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # Hugging Face Spaces requires port 7860; fallback to 5000 for local dev
     port = int(os.environ.get('PORT', 7860))
     app.run(debug=False, host='0.0.0.0', port=port)
