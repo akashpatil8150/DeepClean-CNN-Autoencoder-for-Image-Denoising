@@ -6,7 +6,7 @@ colorTo: blue
 sdk: docker
 pinned: false
 app_port: 7860
-short_description: AI-powered image denoiser using a Convolutional Autoencoder trained on MNIST
+short_description: CNN Autoencoder image denoiser trained on MNIST
 ---
 
 #  DeepClean  CNN Autoencoder for Image Denoising
