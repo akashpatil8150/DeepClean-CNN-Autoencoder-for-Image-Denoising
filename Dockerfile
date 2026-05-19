@@ -29,6 +29,7 @@ COPY best_autoencoder_model.h5 .
 COPY src/ ./src/
 COPY static/ ./static/
 COPY templates/ ./templates/
+COPY test_images/ ./test_images/
 
 # Hugging Face Spaces runs on port 7860
 EXPOSE 7860

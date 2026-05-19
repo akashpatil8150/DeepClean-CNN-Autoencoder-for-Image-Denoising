@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Denoiser - AI Powered</title>
+    <title>DeepClean - Image Denoiser</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🎨 Image Denoiser</h1>
-            <p>Upload a noisy image and let AI clean it up</p>
+            <h1>🎨 DeepClean</h1>
+            <p>CNN Autoencoder — Upload a noisy image or try a sample below</p>
         </header>
 
         <!-- Model Info Section -->
@@ -18,7 +18,6 @@
             <div class="info-header">
                 <h2>📊 Model Performance</h2>
             </div>
-            
             <div class="metrics-grid">
                 <div class="metric-box">
                     <div class="metric-icon">🎯</div>
@@ -27,13 +26,10 @@
                         <div class="metric-value">
                             {% if model_info and model_info.test_accuracy != 'N/A' %}
                                 {{ "%.2f"|format(model_info.test_accuracy * 100) }}%
-                            {% else %}
-                                N/A
-                            {% endif %}
+                            {% else %}N/A{% endif %}
                         </div>
                     </div>
                 </div>
-
                 <div class="metric-box">
                     <div class="metric-icon">📈</div>
                     <div class="metric-content">
@@ -41,13 +37,10 @@
                         <div class="metric-value">
                             {% if model_info and model_info.test_f1_score != 'N/A' %}
                                 {{ "%.4f"|format(model_info.test_f1_score) }}
-                            {% else %}
-                                N/A
-                            {% endif %}
+                            {% else %}N/A{% endif %}
                         </div>
                     </div>
                 </div>
-
                 <div class="metric-box">
                     <div class="metric-icon">📉</div>
                     <div class="metric-content">
@@ -55,14 +48,11 @@
                         <div class="metric-value">
                             {% if model_info and model_info.test_loss != 'N/A' %}
                                 {{ "%.4f"|format(model_info.test_loss) }}
-                            {% else %}
-                                N/A
-                            {% endif %}
+                            {% else %}N/A{% endif %}
                         </div>
                     </div>
                 </div>
             </div>
-
             <div class="dataset-section">
                 <h3>📚 Training Information</h3>
                 <div class="dataset-grid">
@@ -98,7 +88,18 @@
             </div>
         </div>
 
+        <!-- Sample Images Section -->
+        <div class="samples-section">
+            <h2>🖼️ Try a Sample Image</h2>
+            <p class="samples-subtitle">Click any noisy digit below to instantly denoise it</p>
+            <div class="samples-grid" id="samplesGrid">
+                <div class="samples-loading">Loading samples...</div>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
         <div class="upload-section">
+            <h2>📤 Or Upload Your Own</h2>
             <div class="upload-box" id="uploadBox">
                 <input type="file" id="imageInput" accept="image/*" hidden>
                 <div class="upload-content">
@@ -114,7 +115,9 @@
             <button id="denoiseBtn" class="btn-primary" disabled>Denoise Image</button>
         </div>
 
+        <!-- Results Section -->
         <div class="results-section" id="resultsSection" style="display: none;">
+            <h2>✨ Result</h2>
             <div class="image-comparison">
                 <div class="image-box">
                     <h3>Original (Noisy)</h3>
